@@ -14,5 +14,6 @@ extern crate alloc;
 
 #[macro_use]
 extern crate log;
+extern crate time;
 
 pub mod util;
