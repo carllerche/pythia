@@ -108,11 +108,7 @@ impl ScheduledThreadPool {
         };
 
         for _ in (0..size) {
-            let mut worker = Worker {
-                shared: pool.shared.clone(),
-            };
-
-            Thread::spawn(move || worker.run());
+            Worker::start(pool.shared.clone());
         }
 
         pool
@@ -161,15 +157,17 @@ impl Drop for Worker {
     fn drop(&mut self) {
         // Start up a new worker if this one's going away due to a panic from a job
         if Thread::panicking() {
-            let mut worker = Worker {
-                shared: self.shared.clone(),
-            };
-            Thread::spawn(move || worker.run());
+            Worker::start(self.shared.clone());
         }
     }
 }
 
 impl Worker {
+    fn start(shared: Arc<SharedPool>) {
+        let mut worker = Worker { shared: shared };
+        Thread::spawn(move || worker.run());
+    }
+
     fn run(&mut self) {
         loop {
             match self.get_job() {
