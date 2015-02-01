@@ -6,7 +6,7 @@ authors = ["Carl Lerche <me@carllerche.com>"]
 
 [dependencies]
 log = "0.2"
-time = "0.1"
+time = "0.1.14"
 
 [[test]]
 

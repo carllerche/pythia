@@ -5,7 +5,7 @@ use std::thread::Thread;
 use std::thunk::Thunk;
 use std::time::Duration;
 
-use time;
+use time::SteadyTime;
 
 enum JobType {
     Once(Thunk),
@@ -17,7 +17,7 @@ enum JobType {
 
 struct Job {
     type_: JobType,
-    time: u64,
+    time: SteadyTime,
 }
 
 impl PartialOrd for Job {
@@ -123,7 +123,7 @@ impl ScheduledThreadPool {
     pub fn run_after<F>(&self, dur: Duration, job: F) where F: FnOnce() + Send {
         let job = Job {
             type_: JobType::Once(Thunk::new(job)),
-            time: (time::precise_time_ns() as i64 + dur.num_nanoseconds().unwrap()) as u64,
+            time: SteadyTime::now() + dur,
         };
         self.shared.run(job)
     }
@@ -136,7 +136,7 @@ impl ScheduledThreadPool {
     pub fn run_at_fixed_rate<F>(&self, rate: Duration, f: F) where F: FnMut() + Send {
         let job = Job {
             type_: JobType::FixedRate { f: Box::new(f), rate: rate },
-            time: (time::precise_time_ns() as i64 + rate.num_nanoseconds().unwrap()) as u64,
+            time: SteadyTime::now() + rate,
         };
         self.shared.run(job)
     }
@@ -185,13 +185,13 @@ impl Worker {
 
         let mut inner = self.shared.inner.lock().unwrap();
         loop {
-            let now = time::precise_time_ns();
+            let now = SteadyTime::now();
 
             let need = match inner.queue.peek() {
                 None if inner.shutdown => return None,
                 None => Need::Wait,
                 Some(e) if e.time <= now => break,
-                Some(e) => Need::WaitTimeout(Duration::nanoseconds(e.time as i64 - now as i64)),
+                Some(e) => Need::WaitTimeout(e.time - now),
             };
 
             inner = match need {
@@ -210,7 +210,7 @@ impl Worker {
                 f();
                 let new_job = Job {
                     type_: JobType::FixedRate { f: f, rate: rate },
-                    time: (job.time as i64 + rate.num_nanoseconds().unwrap()) as u64,
+                    time: job.time + rate,
                 };
                 self.shared.run(new_job)
             }

@@ -3,11 +3,11 @@ use std::cmp::{self, PartialOrd, Ord, PartialEq, Eq, Ordering};
 use std::sync::{Mutex, MutexGuard, Condvar};
 use std::time::Duration;
 
-use time;
+use time::SteadyTime;
 
 struct Entry<T> {
     t: T,
-    time: u64,
+    time: SteadyTime,
 }
 
 impl<T> PartialOrd for Entry<T> {
@@ -47,7 +47,7 @@ impl<T: Send> DelayQueue<T> {
     pub fn push(&self, t: T, delay: Duration) {
         let new = Entry {
             t: t,
-            time: (time::precise_time_ns() as i64 + delay.num_nanoseconds().unwrap()) as u64,
+            time: SteadyTime::now() + delay,
         };
         let mut queue = self.queue.lock().unwrap();
         match queue.peek() {
@@ -68,7 +68,7 @@ impl<T: Send> DelayQueue<T> {
     pub fn poll(&self) -> Option<T> {
         let queue = self.queue.lock().unwrap();
         match queue.peek() {
-            Some(e) if e.time > time::precise_time_ns() => return None,
+            Some(e) if e.time > SteadyTime::now() => return None,
             Some(_) => {}
             None => return None,
         }
@@ -76,10 +76,10 @@ impl<T: Send> DelayQueue<T> {
     }
 
     pub fn poll_timeout(&self, timeout: Duration) -> Option<T> {
-        let end = (time::precise_time_ns() as i64 + timeout.num_nanoseconds().unwrap()) as u64;
+        let end = SteadyTime::now() + timeout;
         let mut queue = self.queue.lock().unwrap();
         loop {
-            let now = time::precise_time_ns();
+            let now = SteadyTime::now();
             if now >= end {
                 return None;
             }
@@ -90,7 +90,7 @@ impl<T: Send> DelayQueue<T> {
                 None => end,
             };
 
-            let timeout = Duration::nanoseconds(wait_until as i64 - now as i64);
+            let timeout = wait_until - now;
             queue = self.cvar.wait_timeout(queue, timeout).unwrap().0;
         }
 
@@ -105,10 +105,10 @@ impl<T: Send> DelayQueue<T> {
 
         let mut queue = self.queue.lock().unwrap();
         loop {
-            let now = time::precise_time_ns();
+            let now = SteadyTime::now();
             let need = match queue.peek() {
                 Some(e) if e.time <= now => break,
-                Some(e) => Need::WaitTimeout(Duration::nanoseconds(e.time as i64 - now as i64)),
+                Some(e) => Need::WaitTimeout(e.time - now),
                 None => Need::Wait
             };
 
