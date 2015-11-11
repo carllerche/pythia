@@ -4,6 +4,7 @@ use std::cmp::{self, PartialOrd, Ord, PartialEq, Eq, Ordering};
 use std::ops;
 use std::sync::{Arc, Mutex, MutexGuard, Condvar};
 use time::{Duration, SteadyTime};
+use std::time::Duration as StdDuration;
 
 /// A value that should not be used until the delay has expired.
 pub trait Delayed {
@@ -94,9 +95,9 @@ impl<T: Delayed + Send> DelayQueue<T> {
             };
 
             // TODO: Check the cast
-            let timeout = (wait_until - now).num_milliseconds() as u32;
+            let timeout = (wait_until - now).num_milliseconds() as u64;
 
-            queue = self.inner.condvar.wait_timeout_ms(queue, timeout).unwrap().0;
+            queue = self.inner.condvar.wait_timeout(queue, StdDuration::from_millis(timeout)).unwrap().0;
         }
 
         Some(self.finish_pop(queue))
@@ -188,10 +189,10 @@ impl<T: Delayed + Send> SyncQueue<T> for DelayQueue<T> {
                 }
                 Need::WaitTimeout(t) => {
                     // TODO: Check the cast
-                    let timeout = t.num_milliseconds() as u32;
+                    let timeout = t.num_milliseconds() as u64;
                     trace!("condvar wait; timeout={:?}; t={:?}", timeout, t.num_milliseconds());
 
-                    self.inner.condvar.wait_timeout_ms(queue, timeout).unwrap().0
+                    self.inner.condvar.wait_timeout(queue, StdDuration::from_millis(timeout)).unwrap().0
                 }
             };
         }
