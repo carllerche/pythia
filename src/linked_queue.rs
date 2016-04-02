@@ -3,6 +3,7 @@ use time;
 use std::{mem, ptr, ops, usize, u32};
 use std::sync::{Arc, Mutex, MutexGuard, Condvar};
 use std::sync::atomic::{self, AtomicUsize, Ordering};
+use std::time::Duration as StdDuration;
 
 /// A queue in which values are contained by a linked list.
 ///
@@ -206,7 +207,7 @@ impl<T: Send> QueueInner<T> {
                     return Err(e);
                 }
 
-                last = self.not_full.wait_timeout_ms(last, dur)
+                last = self.not_full.wait_timeout(last, StdDuration::from_millis(dur as u64))
                     .ok().expect("something went wrong").0;
 
                 if self.len() != self.capacity {
@@ -269,7 +270,7 @@ impl<T: Send> QueueInner<T> {
                     return None;
                 }
 
-                head = self.not_empty.wait_timeout_ms(head, dur)
+                head = self.not_empty.wait_timeout(head, StdDuration::from_millis(dur as u64))
                     .ok().expect("something went wrong").0;
 
                 if self.len() != 0 {
