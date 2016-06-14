@@ -1,17 +1,17 @@
 use syncbox::{ScheduledThreadPool};
 use std::sync::mpsc::*;
 use std::thread;
-use time::{SteadyTime, Duration};
+use std::time::{Instant, Duration};
 
 #[test]
 pub fn test_one_thread_one_task() {
     let tp = ScheduledThreadPool::single_thread();
     let (tx, rx) = channel();
 
-    let start = SteadyTime::now();
+    let start = Instant::now();
 
     tp.schedule_ms(500, move || {
-        tx.send(SteadyTime::now() - start > ms(500)).unwrap();
+        tx.send(start.elapsed() > ms(500)).unwrap();
     });
 
     assert!(rx.recv().unwrap());
@@ -22,19 +22,19 @@ pub fn test_one_thread_two_tasks() {
     let tp = ScheduledThreadPool::single_thread();
     let (tx, rx) = channel();
 
-    let start = SteadyTime::now();
+    let start = Instant::now();
 
     {
         let tx = tx.clone();
         tp.schedule_ms(500, move || {
-            tx.send(("one", SteadyTime::now() - start > ms(500))).unwrap();
+            tx.send(("one", start.elapsed() > ms(500))).unwrap();
         });
     }
 
     {
         let tx = tx.clone();
         tp.schedule_ms(200, move || {
-            tx.send(("two", SteadyTime::now() - start > ms(200))).unwrap();
+            tx.send(("two", start.elapsed() > ms(200))).unwrap();
         });
     }
 
@@ -47,12 +47,12 @@ pub fn test_two_threads() {
     let tp = ScheduledThreadPool::fixed_size(2);
     let (tx, rx) = channel();
 
-    let start = SteadyTime::now();
+    let start = Instant::now();
 
     {
         let tx = tx.clone();
         tp.schedule_ms(500, move || {
-            assert!(SteadyTime::now() - start > ms(500));
+            assert!(start.elapsed() > ms(500));
             tx.send("win").unwrap();
         });
     }
@@ -60,9 +60,9 @@ pub fn test_two_threads() {
     {
         let tx = tx.clone();
         tp.schedule_ms(100, move || {
-            assert!(SteadyTime::now() - start > ms(100));
+            assert!(start.elapsed() > ms(100));
             tx.send("start").unwrap();
-            thread::sleep_ms(2000);
+            thread::sleep(Duration::from_secs(2));
             tx.send("end").unwrap();
         });
     }
@@ -73,6 +73,6 @@ pub fn test_two_threads() {
     assert_eq!(vals, &["start", "win", "end"]);
 }
 
-fn ms(ms: u32) -> Duration {
-    Duration::milliseconds(ms as i64)
+fn ms(ms: u64) -> Duration {
+    Duration::from_millis(ms)
 }

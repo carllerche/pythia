@@ -3,7 +3,7 @@ use std::marker::PhantomData;
 use std::sync::{Arc, Mutex, Condvar};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::{thread, usize};
-use time::Duration;
+use std::time::Duration;
 
 /// A queue that can be used to back a thread pool
 pub trait WorkQueue<T: Send> : SyncQueue<Option<T>> + Clone + Send + 'static {
@@ -98,7 +98,7 @@ impl ScheduledThreadPool {
     }
 
     pub fn schedule_ms<T: Task+'static>(&self, delay: u32, task: T) {
-        let delay = Duration::milliseconds(delay as i64);
+        let delay = Duration::from_millis(delay as u64);
         let task = Scheduled::Delayed(Box::new(task), delay);
 
         self.thread_pool.inner.run(task, false);

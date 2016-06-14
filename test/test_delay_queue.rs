@@ -1,13 +1,13 @@
 use syncbox::*;
-use time::Duration;
+use std::time::Duration;
 
 #[test]
 fn test_ordering() {
     let queue = DelayQueue::new();
 
-    queue.offer(Delay(1i32, Duration::milliseconds(30))).unwrap();
-    queue.offer(Delay(2i32, Duration::milliseconds(10))).unwrap();
-    queue.offer(Delay(3i32, Duration::milliseconds(20))).unwrap();
+    queue.offer(Delay(1i32, Duration::from_millis(30))).unwrap();
+    queue.offer(Delay(2i32, Duration::from_millis(10))).unwrap();
+    queue.offer(Delay(3i32, Duration::from_millis(20))).unwrap();
 
     assert_eq!(2, *queue.take());
     assert_eq!(3, *queue.take());
@@ -18,8 +18,8 @@ fn test_ordering() {
 fn test_poll() {
     let queue = DelayQueue::new();
 
-    queue.offer(Delay(1i32, Duration::nanoseconds(0))).unwrap();
-    queue.offer(Delay(2i32, Duration::days(1))).unwrap();
+    queue.offer(Delay(1i32, Duration::new(0, 0))).unwrap();
+    queue.offer(Delay(2i32, Duration::from_secs(86400))).unwrap();
 
     assert_eq!(1, *queue.poll().unwrap());
     assert_eq!(None, queue.poll());
@@ -29,11 +29,11 @@ fn test_poll() {
 fn test_poll_timeout() {
     let queue = DelayQueue::new();
 
-    queue.offer(Delay(1i32, Duration::nanoseconds(0))).unwrap();
-    queue.offer(Delay(2i32, Duration::milliseconds(250))).unwrap();
-    queue.offer(Delay(3i32, Duration::days(1))).unwrap();
+    queue.offer(Delay(1i32, Duration::new(0, 0))).unwrap();
+    queue.offer(Delay(2i32, Duration::from_millis(250))).unwrap();
+    queue.offer(Delay(3i32, Duration::from_secs(86400))).unwrap();
 
-    assert_eq!(1, *queue.poll_timeout(Duration::milliseconds(250)).unwrap());
-    assert_eq!(2, *queue.poll_timeout(Duration::milliseconds(500)).unwrap());
-    assert_eq!(None, queue.poll_timeout(Duration::milliseconds(500)));
+    assert_eq!(1, *queue.poll_timeout(Duration::from_millis(250)).unwrap());
+    assert_eq!(2, *queue.poll_timeout(Duration::from_millis(500)).unwrap());
+    assert_eq!(None, queue.poll_timeout(Duration::from_millis(500)));
 }
