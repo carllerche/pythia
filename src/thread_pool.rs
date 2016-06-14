@@ -1,4 +1,4 @@
-use {LinkedQueue, Queue, SyncQueue, Run, Task, Delayed, DelayQueue};
+use {LinkedQueue, SyncQueue, Run, Task, Delayed, DelayQueue};
 use std::marker::PhantomData;
 use std::sync::{Arc, Mutex, Condvar};
 use std::sync::atomic::{AtomicUsize, Ordering};
