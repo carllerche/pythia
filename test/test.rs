@@ -2,7 +2,6 @@ extern crate syncbox;
 
 #[macro_use]
 extern crate log;
-extern crate time;
 extern crate env_logger;
 
 mod test_delay_queue;
@@ -15,20 +14,20 @@ fn spawn<F: FnOnce() + Send + 'static>(f: F) {
     thread::spawn(f);
 }
 
-fn sleep_ms(ms: usize) {
+fn sleep_ms(ms: u64) {
     use std::thread;
-    use time::precise_time_ns;
+    use std::time::{Duration, Instant};
 
-    let start = precise_time_ns();
-    let target = start + (ms as u64) * 1_000_000;
+    let start = Instant::now();
+    let target = start + Duration::from_millis(ms);
 
     loop {
-        let now = precise_time_ns();
+        let now = Instant::now();
 
         if now > target {
             return;
         }
 
-        thread::park_timeout_ms(((target - now) / 1_000_000) as u32);
+        thread::park_timeout(target - now);
     }
 }

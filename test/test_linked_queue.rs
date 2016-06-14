@@ -1,6 +1,6 @@
 use {spawn, sleep_ms};
 use syncbox::LinkedQueue;
-use time;
+use std::time::{Duration, Instant};
 use std::thread;
 
 #[test]
@@ -32,21 +32,21 @@ pub fn test_single_threaded_offer_timeout() {
 
     q.offer(1).unwrap();
 
-    let now = time::precise_time_ns();
+    let now = Instant::now();
     let result = q.offer_ms(2, 200);
-    let delta = time::precise_time_ns() - now;
+    let delta = now.elapsed();
     assert!(result.is_err());
-    assert!(delta >= 200_000_000, "actual={}", delta);
+    assert!(delta >= Duration::from_millis(200), "actual={:?}", delta);
 }
 
 #[test]
 pub fn test_single_threaded_poll_timeout() {
     let q = LinkedQueue::<u32>::new();
 
-    let now = time::precise_time_ns();
+    let now = Instant::now();
     q.poll_ms(200);
-    let delta = time::precise_time_ns() - now;
-    assert!(delta >= 200_000_000, "actual={}", delta);
+    let delta = now.elapsed();
+    assert!(delta >= Duration::from_millis(200), "actual={:?}", delta);
 }
 
 #[test]

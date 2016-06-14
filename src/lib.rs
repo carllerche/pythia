@@ -6,7 +6,6 @@
 
 #[macro_use]
 extern crate log;
-extern crate time;
 
 pub use self::array_queue::ArrayQueue;
 pub use self::delay_queue::{DelayQueue, Delayed, Delay};

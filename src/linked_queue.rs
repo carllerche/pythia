@@ -1,5 +1,5 @@
 use super::{Queue, SyncQueue};
-use time;
+use std::time::Instant;
 use std::{mem, ptr, ops, usize, u32};
 use std::sync::{Arc, Mutex, MutexGuard, Condvar};
 use std::sync::atomic::{self, AtomicUsize, Ordering};
@@ -199,7 +199,7 @@ impl<T: Send> QueueInner<T> {
             .ok().expect("something went wrong");
 
         if self.len() == self.capacity {
-            let mut now = time::precise_time_ns();
+            let mut now = Instant::now();
 
             loop {
                 if dur == 0 {
@@ -213,14 +213,14 @@ impl<T: Send> QueueInner<T> {
                     break;
                 }
 
-                let n = time::precise_time_ns();
-                let d = (n - now) / 1_000_000;
+                let elapsed = now.elapsed();
+                let d = elapsed.as_secs() as u32 * 1000 + elapsed.subsec_nanos() / 1000_000;
 
-                if d >= dur as u64 {
+                if d >= dur {
                     dur = 0;
                 } else {
-                    dur -= d as u32;
-                    now = n;
+                    dur -= d;
+                    now = Instant::now();
                 }
             }
         }
@@ -262,7 +262,7 @@ impl<T: Send> QueueInner<T> {
             .ok().expect("something went wrong");
 
         if self.len() == 0 {
-            let mut now = time::precise_time_ns();
+            let mut now = Instant::now();
 
             loop {
                 if dur == 0 {
@@ -276,14 +276,14 @@ impl<T: Send> QueueInner<T> {
                     break;
                 }
 
-                let n = time::precise_time_ns();
-                let d = (n - now) / 1_000_000;
+                let elapsed = now.elapsed();
+                let d = elapsed.as_secs() as u32 * 1000 + elapsed.subsec_nanos() / 1000_000;
 
-                if d >= dur as u64 {
+                if d >= dur {
                     dur = 0;
                 } else {
-                    dur -= d as u32;
-                    now = n;
+                    dur -= d;
+                    now = Instant::now();
                 }
             }
         }
